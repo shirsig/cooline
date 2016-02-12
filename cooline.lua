@@ -156,7 +156,7 @@ local relevel, throt = false, 0
 function cooline.update_cooldown(frame, position, tthrot, relevel)
 	throt = min(throt, tthrot)
 	if relevel then
-		frame:SetFrameLevel(random(1,5) * 2 + 2)
+		frame:SetFrameLevel(random(1,5) + 2)
 	end
 	cooline.place(frame, position)
 end
