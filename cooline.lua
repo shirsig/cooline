@@ -151,7 +151,7 @@ function cooline.clear_cooldown(name)
 	end
 end
 
-local throt = 0
+local relevel, throt = false, 0
 
 function cooline.update_cooldown(frame, position, tthrot, relevel)
 	throt = min(throt, tthrot)
@@ -162,15 +162,13 @@ function cooline.update_cooldown(frame, position, tthrot, relevel)
 end
 
 do
-	local elapsed, last_relevel = 0, GetTime()
+	local last_update, last_relevel = GetTime(), GetTime()
 	
 	function cooline.on_update(force)
-		if not force then
-			elapsed = elapsed + arg1
-			if elapsed < throt then return end
-		end
-		elapsed = 0
+		if GetTime() - last_update < throt and not force then return end
+		last_update = GetTime()
 		
+		relevel = false
 		if GetTime() - last_relevel > 0.4 then
 			relevel, last_relevel = true, GetTime()
 		end
