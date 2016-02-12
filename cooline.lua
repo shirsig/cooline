@@ -94,7 +94,7 @@ function cooline.detect_cooldowns()
 end
 
 function cooline.cooldown_frame()
-	local frame = CreateFrame('Frame', nil, cooline)
+	local frame = CreateFrame('Frame', nil, cooline.border)
 	frame:SetBackdrop({ bgFile=[[Interface\AddOns\cooline\backdrop.tga]] })
 	frame:SetBackdropColor(0.8, 0.4, 0, 1)
 	frame.icon = frame:CreateTexture(nil, 'ARTWORK')
@@ -156,7 +156,7 @@ local relevel, throt = false, 0
 function cooline.update_cooldown(frame, position, tthrot, relevel)
 	throt = min(throt, tthrot)
 	if relevel then
-		frame:SetFrameLevel(random(1,5) + 2)
+		frame:SetFrameLevel(random(1,5) * 2 + 2)
 	end
 	cooline.place(frame, position)
 end
