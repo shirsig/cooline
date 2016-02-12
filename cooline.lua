@@ -262,17 +262,29 @@ function cooline.VARIABLES_LOADED()
 	cooline:SetResizable(true)
 	cooline:RegisterForDrag('LeftButton')
 	cooline:RegisterForClicks('LeftButtonUp', 'RightButtonUp', 'RightButtonDown')
-	cooline:SetScript('OnDragStart', function() this:StartMoving() end)
-	cooline:SetScript('OnDragStop', function()
+	
+	function cooline:on_drag_stop()
 		this:StopMovingOrSizing()
 		local x, y = this:GetCenter()
 		local ux, uy = UIParent:GetCenter()
 		cooline_settings.x, cooline_settings.y = floor(x - ux + 0.5), floor(y - uy + 0.5)
+		this.dragging = false
+	end
+	cooline:SetScript('OnDragStart', function()
+		this.dragging = true
+		this:StartMoving()
+	end)
+	cooline:SetScript('OnDragStop', function()
+		this:on_drag_stop()
 	end)
 	cooline:SetScript('OnUpdate', function()
 		this:EnableMouse(IsAltKeyDown())
+		if not IsAltKeyDown() and this.dragging then
+			this:on_drag_stop()
+		end
 		cooline.on_update()
 	end)
+	
 	cooline:SetScript('OnDoubleClick', function()
 		cooline_settings.reverse = not cooline_settings.reverse
 		cooline.initialize()
