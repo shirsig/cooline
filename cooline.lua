@@ -3,10 +3,8 @@ cooline:SetScript('OnEvent', function()
 	this[event]()
 end)
 cooline:RegisterEvent('VARIABLES_LOADED')
-cooline:RegisterEvent('SPELL_UPDATE_COOLDOWN')
-cooline:RegisterEvent('BAG_UPDATE_COOLDOWN')
 
-cooline_settings = {}
+cooline_settings = { x = 0, y = -240 }
 
 local frame_pool = {}
 local cooldowns = {}
@@ -18,7 +16,7 @@ end
 
 function cooline.detect_cooldowns()
 	
-	local function start_cooldown(name, texture, start_time, duration)
+	local function start_cooldown(name, texture, start_time, duration, is_spell)
 		local end_time = start_time + duration
 			
 		if cooldowns[name] and cooldowns[name].end_time == end_time then
@@ -27,9 +25,14 @@ function cooline.detect_cooldowns()
 
 		cooldowns[name] = cooldowns[name] or tremove(frame_pool) or cooline.cooldown_frame()
 		local frame = cooldowns[name]
-		frame:SetWidth(22)
-		frame:SetHeight(22)
+		frame:SetWidth(cooline.icon_size)
+		frame:SetHeight(cooline.icon_size)
 		frame.icon:SetTexture(texture)
+		if is_spell then
+			frame:SetBackdropColor(unpack(cooline_theme.spellcolor))
+		else
+			frame:SetBackdropColor(unpack(cooline_theme.nospellcolor))
+		end
 		frame:SetAlpha((end_time - GetTime() > 360) and 0.6 or 1)
 		frame.end_time = end_time
 		frame:Show()
@@ -46,7 +49,8 @@ function cooline.detect_cooldowns()
 							name,
 							GetContainerItemInfo(bag, slot),
 							start_time,
-							duration
+							duration,
+							false
 						)
 					elseif duration == 0 then
 						cooline.clear_cooldown(name)
@@ -65,7 +69,8 @@ function cooline.detect_cooldowns()
 					name,
 					GetInventoryItemTexture('player', slot),
 					start_time,
-					duration
+					duration,
+					false
 				)
 			elseif duration == 0 then
 				cooline.clear_cooldown(name)
@@ -83,7 +88,8 @@ function cooline.detect_cooldowns()
 				name,
 				GetSpellTexture(id, BOOKTYPE_SPELL),
 				start_time,
-				duration
+				duration,
+				true
 			)
 		elseif duration == 0 then
 			cooline.clear_cooldown(name)
@@ -96,7 +102,6 @@ end
 function cooline.cooldown_frame()
 	local frame = CreateFrame('Frame', nil, cooline.border)
 	frame:SetBackdrop({ bgFile=[[Interface\AddOns\cooline\backdrop.tga]] })
-	frame:SetBackdropColor(0.8, 0.4, 0, 1)
 	frame.icon = frame:CreateTexture(nil, 'ARTWORK')
 	frame.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	frame.icon:SetPoint('TOPLEFT', 1, -1)
@@ -104,43 +109,17 @@ function cooline.cooldown_frame()
 	return frame
 end
 
-local function place_H(this, v, just)
-	this:SetPoint(just or 'CENTER', cooline, 'LEFT', v, 0)
+local function place_H(this, offset, just)
+	this:SetPoint(just or 'CENTER', cooline, 'LEFT', offset, 0)
 end
-local function place_HR(this, v, just)
-	this:SetPoint(just or 'CENTER', cooline, 'LEFT', 360 - v, 0)
+local function place_HR(this, offset, just)
+	this:SetPoint(just or 'CENTER', cooline, 'LEFT', cooline_theme.width - offset, 0)
 end
-local function place_V(this, v, just)
-	this:SetPoint(just or 'CENTER', cooline, 'BOTTOM', 0, v)
+local function place_V(this, offset, just)
+	this:SetPoint(just or 'CENTER', cooline, 'BOTTOM', 0, offset)
 end
-local function place_VR(this, v, just)
-	this:SetPoint(just or 'CENTER', cooline, 'BOTTOM', 0, 18 - v)
-end
-
-function cooline.label(f, text, offset, just)
-	local fs = f or cooline.overlay:CreateFontString(nil, 'OVERLAY')
-	fs:SetFont([[Fonts\FRIZQT__.TTF]], 10)
-	fs:SetTextColor(1, 1, 1, 0.8)
-	fs:SetText(text)
-	fs:SetWidth(10 * 3)
-	fs:SetHeight(10 + 2)
-	fs:SetShadowColor(0, 0, 0, 0.5)
-	fs:SetShadowOffset(1, -1)
-	if just then
-		fs:ClearAllPoints()
-		if cooline_settings.reverse then
-			just = (just == 'LEFT' and 'RIGHT') or 'LEFT'
-			offset = offset + ((just == 'LEFT' and 1) or -1)
-			fs:SetJustifyH(just)
-		else
-			offset = offset + ((just == 'LEFT' and 1) or -1)
-			fs:SetJustifyH(just)
-		end
-	else
-		fs:SetJustifyH('CENTER')
-	end
-	cooline.place(fs, offset, just)
-	return fs
+local function place_VR(this, offset, just)
+	this:SetPoint(just or 'CENTER', cooline, 'BOTTOM', 0, cooline_theme.height - offset)
 end
 
 function cooline.clear_cooldown(name)
@@ -172,6 +151,7 @@ do
 		if GetTime() - last_relevel > 0.4 then
 			relevel, last_relevel = true, GetTime()
 		end
+		
 		isactive, throt = false, 1.5
 		for name, frame in pairs(cooldowns) do
 			local time_left = frame.end_time - GetTime()
@@ -185,7 +165,7 @@ do
 				cooline.update_cooldown(frame, 0, 0, relevel)
 				frame:SetAlpha(1 + time_left)  -- fades
 			elseif time_left < 0.3 then
-				local size = cooline.iconsize * (0.5 - time_left) * 5  -- iconsize + iconsize * (0.3 - time_left) / 0.2
+				local size = cooline.icon_size * (0.5 - time_left) * 5  -- icon_size + icon_size * (0.3 - time_left) / 0.2
 				frame:SetWidth(size)
 				frame:SetHeight(size)
 				cooline.update_cooldown(frame, cooline.section * time_left, 0, relevel)
@@ -201,67 +181,49 @@ do
 				cooline.update_cooldown(frame, cooline.section * (time_left + 330) * 0.011111, 0.18, relevel)  -- 4 + (time_left - 30) / 90
 			elseif time_left < 360 then
 				cooline.update_cooldown(frame, cooline.section * (time_left + 1080) * 0.0041667, 1.2, relevel)  -- 5 + (time_left - 120) / 240
-				frame:SetAlpha(1)
+				frame:SetAlpha(cooline_theme.activealpha)
 			else
 				cooline.update_cooldown(frame, 6 * cooline.section, 2, relevel)
 			end
 		end
-		cooline:SetAlpha(isactive and 1 or 0.5)
+		cooline:SetAlpha(isactive and cooline_theme.activealpha or cooline_theme.inactivealpha)
 	end
 end
 
-function cooline.initialize()
-	cooline:SetWidth(360)
-	cooline:SetHeight(18)
-	cooline:SetPoint('CENTER', cooline_settings.x or 0, cooline_settings.y or -240)
-	
-	cooline.bg = cooline.bg or cooline:CreateTexture(nil, 'ARTWORK')
-	cooline.bg:SetTexture([[Interface\TargetingFrame\UI-StatusBar]])
-	cooline.bg:SetVertexColor(0, 0, 0, 0.5)
-	cooline.bg:SetAllPoints(cooline)
-	cooline.bg:SetTexCoord(0, 1, 0, 1)
-
-	cooline.border = cooline.border or CreateFrame('Frame', nil, cooline)
-	cooline.border:SetPoint('TOPLEFT', -4, 4)
-	cooline.border:SetPoint('BOTTOMRIGHT', 4, -4)
-	cooline.border:SetBackdrop({
-		edgeFile = [[Interface\DialogFrame\UI-DialogBox-Border]],
-		edgeSize = 16,
-	})
-	cooline.border:SetBackdropBorderColor(1, 1, 1, 1)
-
-	cooline.overlay = cooline.overlay or CreateFrame('Frame', nil, cooline.border)
-	cooline.overlay:SetFrameLevel(24)
-
-	cooline.section = 360 / 6
-	cooline.iconsize = 18 + 4
-	cooline.place = cooline_settings.reverse and place_HR or place_H
-
-	cooline.tick0 = cooline.label(cooline.tick0, '0', 0, 'LEFT')
-	cooline.tick1 = cooline.label(cooline.tick1, '1', cooline.section)
-	cooline.tick3 = cooline.label(cooline.tick3, '3', cooline.section * 2)
-	cooline.tick10 = cooline.label(cooline.tick10, '10', cooline.section * 3)
-	cooline.tick30 = cooline.label(cooline.tick30, '30', cooline.section * 4)
-	cooline.tick120 = cooline.label(cooline.tick120, '2m', cooline.section * 5)
-	cooline.tick300 = cooline.label(cooline.tick300, '6m', cooline.section * 6, 'RIGHT')
-end
-
-function cooline.BAG_UPDATE_COOLDOWN()
-	cooline.detect_cooldowns()
-end
-
-function cooline.SPELL_UPDATE_COOLDOWN()
-	cooline.detect_cooldowns()
+function cooline.label(text, offset, just)
+	local fs = cooline.overlay:CreateFontString(nil, 'OVERLAY')
+	fs:SetFont(cooline_theme.font, cooline_theme.fontsize)
+	fs:SetTextColor(unpack(cooline_theme.fontcolor))
+	fs:SetText(text)
+	fs:SetWidth(cooline_theme.fontsize * 3)
+	fs:SetHeight(cooline_theme.fontsize + 2)
+	fs:SetShadowColor(unpack(cooline_theme.bgcolor))
+	fs:SetShadowOffset(1, -1)
+	if just then
+		fs:ClearAllPoints()
+		if cooline_theme.vertical then
+			fs:SetJustifyH('CENTER')
+			just = cooline_theme.reverse and ((just == 'LEFT' and 'TOP') or 'BOTTOM') or ((just == 'LEFT' and 'BOTTOM') or 'TOP')
+		elseif cooline_theme.reverse then
+			just = (just == 'LEFT' and 'RIGHT') or 'LEFT'
+			offset = offset + ((just == 'LEFT' and 1) or -1)
+			fs:SetJustifyH(just)
+		else
+			offset = offset + ((just == 'LEFT' and 1) or -1)
+			fs:SetJustifyH(just)
+		end
+	else
+		fs:SetJustifyH('CENTER')
+	end
+	cooline.place(fs, offset, just)
+	return fs
 end
 
 function cooline.VARIABLES_LOADED()
 
 	cooline:SetClampedToScreen(true)
-	cooline:EnableMouse(true)
 	cooline:SetMovable(true)
-	cooline:SetResizable(true)
 	cooline:RegisterForDrag('LeftButton')
-	cooline:RegisterForClicks('LeftButtonUp', 'RightButtonUp', 'RightButtonDown')
 	
 	function cooline:on_drag_stop()
 		this:StopMovingOrSizing()
@@ -284,22 +246,55 @@ function cooline.VARIABLES_LOADED()
 		end
 		cooline.on_update()
 	end)
-	
-	cooline:SetScript('OnDoubleClick', function()
-		cooline_settings.reverse = not cooline_settings.reverse
-		cooline.initialize()
-	end)
-	-- cooline:SetScript('OnMouseDown', function()
-		-- if arg1 == 'RightButton' then
-			-- this:StartSizing('BOTTOMRIGHT')
-		-- end
-	-- end)
-	-- cooline:SetScript('OnMouseUp', function()
-		-- if arg1 == 'RightButton' then
-			-- this:StopMovingOrSizing()
-		-- end
-	-- end)
 
-	cooline.initialize()
+	cooline:SetWidth(cooline_theme.width)
+	cooline:SetHeight(cooline_theme.height)
+	cooline:SetPoint('CENTER', cooline_settings.x, cooline_settings.y)
+	
+	cooline.bg = cooline:CreateTexture(nil, 'ARTWORK')
+	cooline.bg:SetTexture(cooline_theme.statusbar)
+	cooline.bg:SetVertexColor(unpack(cooline_theme.bgcolor))
+	cooline.bg:SetAllPoints(cooline)
+	if cooline_theme.vertical then
+		cooline.bg:SetTexCoord(1, 0, 0, 0, 1, 1, 0, 1)
+	else
+		cooline.bg:SetTexCoord(0, 1, 0, 1)
+	end
+
+	cooline.border = CreateFrame('Frame', nil, cooline)
+	cooline.border:SetPoint('TOPLEFT', -cooline_theme.borderinset, cooline_theme.borderinset)
+	cooline.border:SetPoint('BOTTOMRIGHT', cooline_theme.borderinset, -cooline_theme.borderinset)
+	cooline.border:SetBackdrop({
+		edgeFile = cooline_theme.border,
+		edgeSize = cooline_theme.bordersize,
+	})
+	cooline.border:SetBackdropBorderColor(unpack(cooline_theme.bordercolor))
+
+	cooline.overlay = CreateFrame('Frame', nil, cooline.border)
+	cooline.overlay:SetFrameLevel(24) -- TODO this gets changed automatically later, to 9, find out why
+
+	cooline.section = (cooline_theme.vertical and cooline_theme.height or cooline_theme.width) / 6
+	cooline.icon_size = (cooline_theme.vertical and cooline_theme.width or cooline_theme.height) + cooline_theme.iconoutset * 2
+	cooline.place = cooline_theme.vertical and (cooline_theme.reverse and place_VR or place_V) or (cooline_theme.reverse and place_HR or place_H)
+
+	cooline.tick0 = cooline.label('0', 0, 'LEFT')
+	cooline.tick1 = cooline.label('1', cooline.section)
+	cooline.tick3 = cooline.label('3', cooline.section * 2)
+	cooline.tick10 = cooline.label('10', cooline.section * 3)
+	cooline.tick30 = cooline.label('30', cooline.section * 4)
+	cooline.tick120 = cooline.label('2m', cooline.section * 5)
+	cooline.tick300 = cooline.label('6m', cooline.section * 6, 'RIGHT')
+	
+	cooline:RegisterEvent('SPELL_UPDATE_COOLDOWN')
+	cooline:RegisterEvent('BAG_UPDATE_COOLDOWN')
+	
+	cooline.detect_cooldowns()
+end
+
+function cooline.BAG_UPDATE_COOLDOWN()
+	cooline.detect_cooldowns()
+end
+
+function cooline.SPELL_UPDATE_COOLDOWN()
 	cooline.detect_cooldowns()
 end
