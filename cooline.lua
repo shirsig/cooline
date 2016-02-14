@@ -19,8 +19,10 @@ function cooline.detect_cooldowns()
 	local function start_cooldown(name, texture, start_time, duration, is_spell)
 		local end_time = start_time + duration
 			
-		if cooldowns[name] and cooldowns[name].end_time == end_time then
-			return
+		for _, cooldown in pairs(cooldowns) do
+			if cooldown.end_time == end_time then
+				return
+			end
 		end
 
 		cooldowns[name] = cooldowns[name] or tremove(frame_pool) or cooline.cooldown_frame()
