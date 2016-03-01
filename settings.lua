@@ -18,3 +18,7 @@ cooline_theme = {
 	inactivealpha = 0.5,
 	activealpha = 1.0,
 }
+
+cooline_ignore_list = {
+	'hearthstone'
+}

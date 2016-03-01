@@ -2,5 +2,5 @@
 ## Title: cooline
 ## SavedVariablesPerCharacter: cooline_settings
 
-theme.lua
+settings.lua
 cooline.lua

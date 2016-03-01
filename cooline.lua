@@ -17,6 +17,12 @@ end
 function cooline.detect_cooldowns()
 	
 	local function start_cooldown(name, texture, start_time, duration, is_spell)
+		for _, ignored_name in cooline_ignore_list do
+			if strupper(name) == strupper(ignored_name) then
+				return
+			end
+		end
+		
 		local end_time = start_time + duration
 			
 		for _, cooldown in pairs(cooldowns) do
