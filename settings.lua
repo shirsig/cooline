@@ -17,6 +17,7 @@ cooline_theme = {
 	nospellcolor = { 0, 0, 0, 1 },
 	inactivealpha = 0.5,
 	activealpha = 1.0,
+	treshold = 3.0,
 }
 
 cooline_ignore_list = {
