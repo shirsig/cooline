@@ -140,11 +140,35 @@ end
 
 local relevel, throt = false, 0
 
-function cooline.update_cooldown(frame, position, tthrot, relevel)
-	throt = min(throt, tthrot)
-	if relevel then
-		frame:SetFrameLevel(random(1,5) + 2)
+function getKeysSortedByValue(tbl, sortFunction)
+	local keys = {}
+	for key in pairs(tbl) do
+		table.insert(keys, key)
 	end
+
+	table.sort(keys, function(a, b)
+		return sortFunction(tbl[a], tbl[b])
+	end)
+
+	return keys
+end
+
+function cooline.update_cooldown(name, frame, position, tthrot, relevel)
+	throt = min(throt, tthrot)
+	
+	if frame.end_time - GetTime() < cooline_theme.treshold then
+		local sorted = getKeysSortedByValue(cooldowns, function(a, b) return a.end_time > b.end_time end)
+		for i, k in ipairs(sorted) do
+			if name == k then
+				frame:SetFrameLevel(i+2)
+			end
+		end
+	else
+		if relevel then
+			frame:SetFrameLevel(random(1,5) + 2)
+		end
+	end
+	
 	cooline.place(frame, position)
 end
 
@@ -170,28 +194,28 @@ do
 				isactive = true
 				cooline.clear_cooldown(name)
 			elseif time_left < 0 then
-				cooline.update_cooldown(frame, 0, 0, relevel)
+				cooline.update_cooldown(name, frame, 0, 0, relevel)
 				frame:SetAlpha(1 + time_left)  -- fades
 			elseif time_left < 0.3 then
 				local size = cooline.icon_size * (0.5 - time_left) * 5  -- icon_size + icon_size * (0.3 - time_left) / 0.2
 				frame:SetWidth(size)
 				frame:SetHeight(size)
-				cooline.update_cooldown(frame, cooline.section * time_left, 0, relevel)
+				cooline.update_cooldown(name, frame, cooline.section * time_left, 0, relevel)
 			elseif time_left < 1 then
-				cooline.update_cooldown(frame, cooline.section * time_left, 0, relevel)
+				cooline.update_cooldown(name, frame, cooline.section * time_left, 0, relevel)
 			elseif time_left < 3 then
-				cooline.update_cooldown(frame, cooline.section * (time_left + 1) * 0.5, 0.02, relevel)  -- 1 + (time_left - 1) / 2
+				cooline.update_cooldown(name, frame, cooline.section * (time_left + 1) * 0.5, 0.02, relevel)  -- 1 + (time_left - 1) / 2
 			elseif time_left < 10 then
-				cooline.update_cooldown(frame, cooline.section * (time_left + 11) * 0.14286, time_left > 4 and 0.05 or 0.02, relevel)  -- 2 + (time_left - 3) / 7
+				cooline.update_cooldown(name, frame, cooline.section * (time_left + 11) * 0.14286, time_left > 4 and 0.05 or 0.02, relevel)  -- 2 + (time_left - 3) / 7
 			elseif time_left < 30 then
-				cooline.update_cooldown(frame, cooline.section * (time_left + 50) * 0.05, 0.06, relevel)  -- 3 + (time_left - 10) / 20
+				cooline.update_cooldown(name, frame, cooline.section * (time_left + 50) * 0.05, 0.06, relevel)  -- 3 + (time_left - 10) / 20
 			elseif time_left < 120 then
-				cooline.update_cooldown(frame, cooline.section * (time_left + 330) * 0.011111, 0.18, relevel)  -- 4 + (time_left - 30) / 90
+				cooline.update_cooldown(name, frame, cooline.section * (time_left + 330) * 0.011111, 0.18, relevel)  -- 4 + (time_left - 30) / 90
 			elseif time_left < 360 then
-				cooline.update_cooldown(frame, cooline.section * (time_left + 1080) * 0.0041667, 1.2, relevel)  -- 5 + (time_left - 120) / 240
+				cooline.update_cooldown(name, frame, cooline.section * (time_left + 1080) * 0.0041667, 1.2, relevel)  -- 5 + (time_left - 120) / 240
 				frame:SetAlpha(cooline_theme.activealpha)
 			else
-				cooline.update_cooldown(frame, 6 * cooline.section, 2, relevel)
+				cooline.update_cooldown(name, frame, 6 * cooline.section, 2, relevel)
 			end
 		end
 		cooline:SetAlpha(isactive and cooline_theme.activealpha or cooline_theme.inactivealpha)
