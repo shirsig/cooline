@@ -23,3 +23,5 @@ cooline_theme = {
 cooline_ignore_list = {
 	'hearthstone'
 }
+
+COOLINE_LOADED_MESSAGE = 'Cooline loaded: move the location of the cooline bar by holding <alt> while dragging it with left mouse button.'
